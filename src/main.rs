@@ -1,11 +1,14 @@
 mod player;
+use player::*;
 
 use std::str;
 use std::thread;
 use std::net::UdpSocket;
+use std::collections::HashMap;
 
 extern crate regex;
 use regex::Regex;
+use std::thread::Thread;
 
 fn main() {
 
@@ -16,25 +19,41 @@ fn main() {
         Err(e) => panic!("couldn't bind socket: {}", e)
     };
 
-    let mut players: Vec<player::Player> = Vec::new();
+    let mut players: HashMap<String, Player> = HashMap::new();
 
     let mut buf = [0; 2048];
     loop {
         match socket.recv_from(&mut buf) {
             Ok((amt, src)) => {
                 let data = str::from_utf8(&buf).unwrap_or("");
-                println!("amt: {}", amt);
-                println!("src: {}", src);
-                println!("{}", data);
                 match &data[..1] {
                     "p" => {
                         println!("Position Update");
                         let cap = re_position.captures(data).unwrap();
-                        let discord = &cap[1];
+                        let discord = cap[1].to_string();
                         let x = &cap[3];
                         let y = &cap[5];
                         let z = &cap[7];
-                        println!("User {0} has moved to x = {1}, y = {2}, z = {3}",discord,x,y,z);
+                        if !players.contains_key(&discord) {
+                            println!("New User {0}",discord);
+                            players.insert(discord.clone(), Player::new(discord.clone().parse::<i64>().unwrap()));
+                        }
+                        match players.get_mut(&discord) {
+                            Some(player) => {
+                                player.set_position([
+                                    x.parse::<f32>().unwrap_or(0.0),
+                                    y.parse::<f32>().unwrap_or(0.0),
+                                    z.parse::<f32>().unwrap_or(0.0)
+                                ]);
+                                let pos = player.get_position();
+                                println!("Pos: {}, {}, {}",pos.x,pos.y,pos.z);
+                                let vel = player.get_velocity();
+                                println!("Vel: {}, {}, {}",vel.x,vel.y,vel.z);
+                            },
+                            None => {
+                                println!("Couldn't find player!");
+                            }
+                        }
                     },
                     "o" => {
                         println!("Orientation Update");
