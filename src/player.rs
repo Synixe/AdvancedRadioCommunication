@@ -1,4 +1,16 @@
+extern crate typemap;
+use self::typemap::Key;
+
+use serenity::prelude::Mutex;
+
+use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::SystemTime;
+
+pub struct PlayerManager;
+impl Key for PlayerManager {
+    type Value = Arc<Mutex<HashMap<String, Player>>>;
+}
 
 pub struct Player {
     discord: i64,

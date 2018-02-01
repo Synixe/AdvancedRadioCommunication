@@ -1,71 +1,34 @@
+mod handler;
 mod player;
-use player::*;
+mod server;
+mod voice;
 
-use std::str;
-use std::thread;
-use std::net::UdpSocket;
+extern crate alto;
+
+extern crate serenity;
+use serenity::client::Client;
+use serenity::prelude::Mutex;
+
 use std::collections::HashMap;
+use std::env;
+use std::sync::Arc;
 
-extern crate regex;
-use regex::Regex;
-use std::thread::Thread;
+use handler::Handler;
+use player::*;
+use voice::VoiceManager;
 
 fn main() {
 
-    let re_position = Regex::new(r"([0-9]+?)([x])([0-9\.]+?)([y])([0-9\.]+?)([z])([0-9\.]+)").unwrap();
+    let players: Arc<Mutex<HashMap<String, Player>>> = Arc::new(Mutex::new(HashMap::new()));
 
-    let socket = match UdpSocket::bind("0.0.0.0:5514") {
-        Ok(s) => s,
-        Err(e) => panic!("couldn't bind socket: {}", e)
-    };
+    let mut client = Client::new(&env::var("DISCORD_TOKEN").expect("token"), Handler)
+        .expect("Error creating client");
 
-    let mut players: HashMap<String, Player> = HashMap::new();
-
-    let mut buf = [0; 2048];
-    loop {
-        match socket.recv_from(&mut buf) {
-            Ok((amt, src)) => {
-                let data = str::from_utf8(&buf).unwrap_or("");
-                match &data[..1] {
-                    "p" => {
-                        println!("Position Update");
-                        let cap = re_position.captures(data).unwrap();
-                        let discord = cap[1].to_string();
-                        let x = &cap[3];
-                        let y = &cap[5];
-                        let z = &cap[7];
-                        if !players.contains_key(&discord) {
-                            println!("New User {0}",discord);
-                            players.insert(discord.clone(), Player::new(discord.clone().parse::<i64>().unwrap()));
-                        }
-                        match players.get_mut(&discord) {
-                            Some(player) => {
-                                player.set_position([
-                                    x.parse::<f32>().unwrap_or(0.0),
-                                    y.parse::<f32>().unwrap_or(0.0),
-                                    z.parse::<f32>().unwrap_or(0.0)
-                                ]);
-                                let pos = player.get_position();
-                                println!("Pos: {}, {}, {}",pos.x,pos.y,pos.z);
-                                let vel = player.get_velocity();
-                                println!("Vel: {}, {}, {}",vel.x,vel.y,vel.z);
-                            },
-                            None => {
-                                println!("Couldn't find player!");
-                            }
-                        }
-                    },
-                    "o" => {
-                        println!("Orientation Update");
-                    },
-                    _ => {
-                        println!("Unknown");
-                    }
-                }
-            },
-            Err(e) => {
-                println!("couldn't recieve a datagram: {}", e);
-            }
-        }
+    {
+        let mut data = client.data.lock();
+        data.insert::<VoiceManager>(Arc::clone(&client.voice_manager));
+        data.insert::<PlayerManager>(Arc::clone(&players.clone()));
     }
+
+    client.start();
 }

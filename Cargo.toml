@@ -6,6 +6,7 @@ authors = ["Brett <brett@bmandesigns.com>"]
 [dependencies]
 typemap = "~0.3"
 regex = "0.2"
+alto = "*"
 
 [dependencies.serenity]
 git = "https://github.com/zeyla/serenity.git"
