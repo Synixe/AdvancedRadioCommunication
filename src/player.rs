@@ -13,7 +13,6 @@ impl Key for PlayerManager {
 }
 
 pub struct Player {
-    discord: i64,
     position: Vector3,
     velocity: Vector3,
     orientation: Vector3,
@@ -21,9 +20,8 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new(discord: i64) -> Player {
+    pub fn new() -> Player {
         Player {
-            discord: discord.clone(),
             position: Vector3::new(0.0, 0.0, 0.0),
             velocity: Vector3::new(0.0, 0.0, 0.0),
             orientation: Vector3::new(0.0, 0.0, 0.0),
@@ -47,10 +45,12 @@ impl Player {
         self.position.y = position[1];
         self.position.z = position[2];
     }
-    pub fn get_position(&self) -> &Vector3 { &self.position }
-    pub fn get_velocity(&self) -> &Vector3 { &self.velocity }
+    pub fn get_position(&self) -> Vector3 { self.position.clone() }
+    pub fn get_velocity(&self) -> Vector3 { self.velocity.clone() }
+    pub fn get_orientation(&self) -> Vector3 { self.orientation.clone() }
 }
 
+#[derive(Copy)]
 pub struct Vector3 {
     pub x: f32,
     pub y: f32,
@@ -65,4 +65,7 @@ impl Vector3 {
             z: z
         }
     }
+}
+impl Clone for Vector3 {
+    fn clone(&self) -> Vector3 { *self }
 }
